@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id       String @id @default(uuid())
+  name     String
+  email    String @unique
+  password String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events Event[]
+}
+
+model Event {
+  id     String      @id @default(uuid())
+  slug   String      @unique
+  title  String
+  status EventStatus @default(DRAFT)
+
+  form_schema Json?
+
+  registration_deadline DateTime?
+
+  template_url  String?
+  cert_name_x   Float?
+  cert_name_y   Float?
+  cert_number_x Float?
+  cert_number_y Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adminId String
+  admin   Admin  @relation(fields: [adminId], references: [id])
+
+  participants Participant[]
+}
+
+model Participant {
+  id        String @id @default(uuid())
+  ticket_id String @unique @default(uuid())
+  name      String
+  email     String
+
+  custom_answers Json?
+
+  status ParticipantStatus @default(REGISTERED)
+
+  certificate_number String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  eventId String
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  COMPLETED
+}
+
+enum ParticipantStatus {
+  REGISTERED
+  ATTENDED
+  CERTIFICATE_SENT
+  FAILED
+}
