@@ -4,8 +4,7 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -33,6 +32,8 @@ model Event {
   form_schema Json?
 
   registration_deadline DateTime?
+
+  max_quota Int?
 
   template_url  String?
   cert_name_x   Float?
@@ -67,6 +68,8 @@ model Participant {
   eventId String
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
 }
 
 enum EventStatus {
