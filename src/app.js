@@ -19,6 +19,10 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// routes
+const adminRoutes = require("./routes/admin.routes");
+app.use("/api/admin", adminRoutes);
+
 // global error handler
 app.use((err, req, res, next) => {
   console.error(`[ERROR]: ${err.message}`);
