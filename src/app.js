@@ -1,6 +1,6 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,25 +11,35 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // check API status
-app.get("/api/health", (req, res) => {
+app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: "Service is healthy",
+    message: 'Service is healthy',
     server_time: new Date().toISOString(),
   });
 });
 
 // routes
-const adminRoutes = require("./routes/admin.routes");
-app.use("/api/admin", adminRoutes);
+const adminRoutes = require('./routes/admin.routes');
+app.use('/api/admin', adminRoutes);
 
 // global error handler
 app.use((err, req, res, next) => {
-  console.error(`[ERROR]: ${err.message}`);
+  // zod error handler
+  if (err.name === 'ZodError') {
+    const message = (err.issues || []).map((issue) => issue.message).join(', ');
+    return res.status(400).json({
+      success: false,
+      message: message || 'Validation error.',
+    });
+  }
 
-  res.status(err.status || 500).json({
+  const status = err.status || 500;
+  const message = err.message || 'Internal Server Error';
+
+  res.status(status).json({
     success: false,
-    message: err.message || "Internal Server Error",
+    message,
   });
 });
 
@@ -37,7 +47,7 @@ app.use((err, req, res, next) => {
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
-    message: "Not found",
+    message: 'Not found',
   });
 });
 
