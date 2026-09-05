@@ -97,12 +97,30 @@ const updateEvent = async (id, updateData, file) => {
     throw error;
   }
 
+  if (updateData.status) {
+    if (existingEvent.status === 'PUBLISHED' && updateData.status === 'DRAFT') {
+      const error = new Error('Cannot revert a PUBLISHED event back to DRAFT.');
+      error.status = 400;
+      throw error;
+    }
+
+    if (
+      existingEvent.status === 'COMPLETED' &&
+      updateData.status !== 'COMPLETED'
+    ) {
+      const error = new Error('Cannot change the status of a COMPLETED event.');
+      error.status = 400;
+      throw error;
+    }
+  }
+
   if (
-    existingEvent.status === 'PUBLISHED' &&
+    (existingEvent.status === 'PUBLISHED' ||
+      existingEvent.status === 'COMPLETED') &&
     updateData.form_schema !== undefined
   ) {
     const error = new Error(
-      'Form schema cannot be modified once the event is PUBLISHED.',
+      'Form schema cannot be modified once the event is PUBLISHED or COMPLETED.',
     );
     error.status = 400;
     throw error;
