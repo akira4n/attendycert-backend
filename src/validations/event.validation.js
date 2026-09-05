@@ -42,6 +42,29 @@ const eventSchema = z.object({
   form_schema: z.array(formFieldSchema).optional().default([]),
 });
 
+const updateEventSchema = eventSchema.partial().extend({
+  form_schema: z.array(formFieldSchema).optional(),
+
+  status: z
+    .enum(['DRAFT', 'PUBLISHED', 'COMPLETED'], {
+      error: 'Status must be one of: DRAFT, PUBLISHED, COMPLETED.',
+    })
+    .optional(),
+
+  max_quota: z.coerce
+    .number()
+    .int({ message: 'Max quota must be an integer.' })
+    .positive({ message: 'Max quota must be a positive integer.' })
+    .nullable()
+    .optional(),
+
+  cert_name_x: z.coerce.number().nullable().optional(),
+  cert_name_y: z.coerce.number().nullable().optional(),
+  cert_number_x: z.coerce.number().nullable().optional(),
+  cert_number_y: z.coerce.number().nullable().optional(),
+});
+
 module.exports = {
   eventSchema,
+  updateEventSchema,
 };
