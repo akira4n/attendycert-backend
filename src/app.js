@@ -21,7 +21,10 @@ app.get('/api/health', (req, res) => {
 
 // routes
 const adminRoutes = require('./routes/admin.routes');
+const eventRouter = require('./routes/event.routes');
+
 app.use('/api/admin', adminRoutes);
+app.use('/api/events', eventRouter);
 
 // global error handler
 app.use((err, req, res, next) => {
