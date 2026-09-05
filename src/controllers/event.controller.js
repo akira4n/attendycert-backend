@@ -29,7 +29,38 @@ const getEventBySlug = async (req, res, next) => {
   }
 };
 
+const getAllEventsAdmin = async (req, res, next) => {
+  try {
+    const result = await eventService.getAllEventsAdmin(req.query);
+
+    res.status(200).json({
+      success: true,
+      message: 'Events retrieved successfully',
+      data: result.events,
+      meta: result.meta,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getEventById = async (req, res, next) => {
+  try {
+    const event = await eventService.getEventById(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Event retrieved successfully',
+      data: event,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createEvent,
   getEventBySlug,
+  getAllEventsAdmin,
+  getEventById,
 };
