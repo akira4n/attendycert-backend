@@ -69,6 +69,7 @@ model Participant {
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
+  @@unique([eventId, email])
   @@index([eventId])
 }
 
