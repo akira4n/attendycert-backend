@@ -1,4 +1,5 @@
 const eventRepo = require('../repositories/event.repository');
+const { uploadToCloudinary } = require('../config/cloudinary');
 
 const createEvent = async ({
   title,
@@ -88,9 +89,58 @@ const getAllEventsAdmin = async ({ page = 1, limit = 10, search, status }) => {
   };
 };
 
+const updateEvent = async (id, updateData, file) => {
+  const existingEvent = await eventRepo.findEventById(id);
+  if (!existingEvent) {
+    const error = new Error('Event not found.');
+    error.status = 404;
+    throw error;
+  }
+
+  if (
+    existingEvent.status === 'PUBLISHED' &&
+    updateData.form_schema !== undefined
+  ) {
+    const error = new Error(
+      'Form schema cannot be modified once the event is PUBLISHED.',
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  if (updateData.slug && updateData.slug !== existingEvent.slug) {
+    const existingSlug = await eventRepo.findEventBySlug(updateData.slug);
+    if (existingSlug) {
+      const error = new Error(
+        'Event slug already exists. Please use another unique slug.',
+      );
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  if (file) {
+    const uploadResult = await uploadToCloudinary(
+      file.buffer,
+      'attendycert/templates',
+    );
+    updateData.template_url = uploadResult.secure_url;
+  }
+
+  if (updateData.registration_deadline) {
+    updateData.registration_deadline = new Date(
+      updateData.registration_deadline,
+    );
+  }
+
+  const updatedEvent = await eventRepo.updateEvent(id, updateData);
+  return updatedEvent;
+};
+
 module.exports = {
   createEvent,
   getEventBySlug,
   getEventById,
   getAllEventsAdmin,
+  updateEvent,
 };
