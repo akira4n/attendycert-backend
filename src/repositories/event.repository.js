@@ -46,10 +46,18 @@ const createEvent = async (data) => {
   });
 };
 
+const updateEvent = async (id, data) => {
+  return await prisma.event.update({
+    where: { id },
+    data,
+  });
+};
+
 module.exports = {
   findEventBySlug,
   findPublishedEventBySlug,
   findEventById,
   findAllEvents,
   createEvent,
+  updateEvent,
 };
