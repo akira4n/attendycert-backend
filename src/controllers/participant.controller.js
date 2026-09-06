@@ -23,6 +23,45 @@ const registerParticipant = async (req, res, next) => {
   }
 };
 
+const checkIn = async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+    const { ticket_id } = req.body;
+
+    const participant = await participantService.checkInParticipant(
+      eventId,
+      ticket_id,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Check-in successful. Welcome to the event!',
+      data: { participant },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getParticipants = async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+    const result = await participantService.getEventParticipants(
+      eventId,
+      req.query,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Participants fetched successfully.',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 module.exports = {
   registerParticipant,
+  checkIn,
+  getParticipants,
 };
