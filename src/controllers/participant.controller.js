@@ -60,8 +60,46 @@ const getParticipants = async (req, res, next) => {
     next(error);
   }
 };
+
+const generateCertificates = async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+    const result = await participantService.generateCertificates(
+      eventId,
+      req.body,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: { queued_count: result.queued_count },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resendCertificate = async (req, res, next) => {
+  try {
+    const { eventId, participantId } = req.params;
+    const result = await participantService.resendParticipantCertificate(
+      eventId,
+      participantId,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   registerParticipant,
   checkIn,
   getParticipants,
+  generateCertificates,
+  resendCertificate,
 };
