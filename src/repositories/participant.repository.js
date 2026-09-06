@@ -85,6 +85,32 @@ const findParticipantsByEvent = async (
   };
 };
 
+const findParticipantsForCertificate = async (eventId) => {
+  return await prisma.participant.findMany({
+    where: {
+      eventId,
+      status: 'ATTENDED',
+    },
+    orderBy: { name: 'asc' },
+  });
+};
+
+const assignCertificateNumbers = async (participantsWithNumbers) => {
+  const updatePromises = participantsWithNumbers.map((p) =>
+    prisma.participant.update({
+      where: { id: p.id },
+      data: { certificate_number: p.certificate_number },
+    }),
+  );
+  return await prisma.$transaction(updatePromises);
+};
+
+const findParticipantById = async (id) => {
+  return await prisma.participant.findUnique({
+    where: { id },
+  });
+};
+
 module.exports = {
   findParticipantByEmailAndEvent,
   countParticipantsByEvent,
@@ -92,4 +118,7 @@ module.exports = {
   findParticipantByTicketAndEvent,
   updateParticipantStatus,
   findParticipantsByEvent,
+  findParticipantsForCertificate,
+  assignCertificateNumbers,
+  findParticipantById,
 };
