@@ -1,6 +1,6 @@
 const prisma = require('../config/prisma');
 
-const findParticipantByEmailAndEvent = async (eventId, email) => {
+const findParticipantByEmailAndEvent = async ({ eventId, email }) => {
   return await prisma.participant.findUnique({
     where: {
       eventId_email: {
@@ -32,26 +32,29 @@ const createParticipant = async (data) => {
   });
 };
 
-const findParticipantByTicketAndEvent = async (ticket_id, eventId) => {
+const findParticipantByTicketAndEvent = async ({ ticketId, eventId }) => {
   return await prisma.participant.findFirst({
     where: {
-      ticket_id,
+      ticket_id: ticketId,
       eventId,
     },
   });
 };
 
-const updateParticipantStatus = async (id, status) => {
+const updateParticipantStatus = async ({ id, status }) => {
   return await prisma.participant.update({
     where: { id },
     data: { status },
   });
 };
 
-const findParticipantsByEvent = async (
+const findParticipantsByEvent = async ({
   eventId,
-  { search, status, page = 1, limit = 10 },
-) => {
+  search,
+  status,
+  page = 1,
+  limit = 10,
+}) => {
   const skip = (Number(page) - 1) * Number(limit);
 
   const where = {

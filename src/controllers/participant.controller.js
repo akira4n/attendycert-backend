@@ -28,10 +28,10 @@ const checkIn = async (req, res, next) => {
     const { eventId } = req.params;
     const { ticket_id } = req.body;
 
-    const participant = await participantService.checkInParticipant(
+    const participant = await participantService.checkInParticipant({
       eventId,
-      ticket_id,
-    );
+      ticketId: ticket_id,
+    });
 
     return res.status(200).json({
       success: true,
@@ -46,10 +46,10 @@ const checkIn = async (req, res, next) => {
 const getParticipants = async (req, res, next) => {
   try {
     const { eventId } = req.params;
-    const result = await participantService.getEventParticipants(
+    const result = await participantService.getEventParticipants({
       eventId,
-      req.query,
-    );
+      queryParams: req.query,
+    });
 
     return res.status(200).json({
       success: true,
@@ -64,10 +64,10 @@ const getParticipants = async (req, res, next) => {
 const generateCertificates = async (req, res, next) => {
   try {
     const { eventId } = req.params;
-    const result = await participantService.generateCertificates(
+    const result = await participantService.generateCertificates({
       eventId,
-      req.body,
-    );
+      ...req.body,
+    });
 
     return res.status(200).json({
       success: true,
@@ -82,10 +82,10 @@ const generateCertificates = async (req, res, next) => {
 const resendCertificate = async (req, res, next) => {
   try {
     const { eventId, participantId } = req.params;
-    const result = await participantService.resendParticipantCertificate(
+    const result = await participantService.resendParticipantCertificate({
       eventId,
       participantId,
-    );
+    });
 
     return res.status(200).json({
       success: true,

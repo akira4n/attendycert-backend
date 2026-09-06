@@ -162,11 +162,11 @@ const registerParticipant = async ({
   }
 };
 
-const checkInParticipant = async (eventId, ticket_id) => {
-  const participant = await participantRepo.findParticipantByTicketAndEvent(
-    ticket_id,
+const checkInParticipant = async ({ eventId, ticketId }) => {
+  const participant = await participantRepo.findParticipantByTicketAndEvent({
+    ticketId,
     eventId,
-  );
+  });
 
   if (!participant) {
     const error = new Error(
@@ -182,19 +182,22 @@ const checkInParticipant = async (eventId, ticket_id) => {
     throw error;
   }
 
-  const updatedParticipant = await participantRepo.updateParticipantStatus(
-    participant.id,
-    'ATTENDED',
-  );
+  const updatedParticipant = await participantRepo.updateParticipantStatus({
+    id: participant.id,
+    status: 'ATTENDED',
+  });
 
   return updatedParticipant;
 };
 
-const getEventParticipants = async (eventId, queryParams) => {
-  return await participantRepo.findParticipantsByEvent(eventId, queryParams);
+const getEventParticipants = async ({ eventId, queryParams }) => {
+  return await participantRepo.findParticipantsByEvent({
+    eventId,
+    ...queryParams,
+  });
 };
 
-const generateCertificates = async (eventId, { prefix = 'CERT/AC/2026' }) => {
+const generateCertificates = async ({ eventId, prefix = 'CERT/AC/2026' }) => {
   const event = await eventRepo.findEventById(eventId);
   if (!event) {
     const error = new Error('Event not found.');
@@ -313,7 +316,7 @@ const generateCertificates = async (eventId, { prefix = 'CERT/AC/2026' }) => {
   };
 };
 
-const resendParticipantCertificate = async (eventId, participantId) => {
+const resendParticipantCertificate = async ({ eventId, participantId }) => {
   const event = await eventRepo.findEventById(eventId);
   if (!event || !event.template_url) {
     const error = new Error('Event or certificate template not found.');
