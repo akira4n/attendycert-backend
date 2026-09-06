@@ -43,25 +43,25 @@ const buildDynamicFormSchema = (formSchema) => {
     switch (field.type) {
       case 'number':
         fieldValidator = z.coerce.number({
-          error: `${field.label || field.name} must be a number.`,
+          error: `${field.name} must be a number.`,
         });
         break;
 
       case 'select':
         if (Array.isArray(field.options) && field.options.length > 0) {
           fieldValidator = z.enum(field.options, {
-            error: `Invalid option for ${field.label || field.name}. Allowed: ${field.options.join(', ')}`,
+            error: `Invalid option for ${field.name}. Allowed: ${field.options.join(', ')}`,
           });
         } else {
           fieldValidator = z.string({
-            error: `${field.label || field.name} must be a string.`,
+            error: `${field.name} must be a string.`,
           });
         }
         break;
 
       case 'file':
         fieldValidator = z.url({
-          error: `${field.label || field.name} must be a valid file URL.`,
+          error: `${field.name} must be a valid file URL.`,
         });
         break;
 
@@ -69,7 +69,7 @@ const buildDynamicFormSchema = (formSchema) => {
       case 'textarea':
       default:
         fieldValidator = z.string({
-          error: `${field.label || field.name} must be a string.`,
+          error: `${field.name} must be a string.`,
         });
         break;
     }
@@ -81,7 +81,7 @@ const buildDynamicFormSchema = (formSchema) => {
         field.type === 'file'
       ) {
         fieldValidator = fieldValidator.min(1, {
-          error: `${field.label || field.name} is required.`,
+          error: `${field.name} is required.`,
         });
       }
     } else {
