@@ -64,12 +64,34 @@ const registerParticipant = async ({
     const newParticipant = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT id FROM "Event" WHERE id = ${event.id} FOR UPDATE`;
 
-      if (event.max_quota !== null && event.max_quota !== undefined) {
+      const lockedEvent = await tx.event.findUnique({
+        where: { id: event.id },
+      });
+
+      if (!lockedEvent || lockedEvent.status !== 'PUBLISHED') {
+        const error = new Error('Event is no longer available.');
+        error.status = 400;
+        throw error;
+      }
+
+      if (
+        lockedEvent.registration_deadline &&
+        new Date() > lockedEvent.registration_deadline
+      ) {
+        const error = new Error('Registration for this event has closed.');
+        error.status = 400;
+        throw error;
+      }
+
+      if (
+        lockedEvent.max_quota !== null &&
+        lockedEvent.max_quota !== undefined
+      ) {
         const currentCount = await tx.participant.count({
-          where: { eventId: event.id },
+          where: { eventId: lockedEvent.id },
         });
 
-        if (currentCount >= event.max_quota) {
+        if (currentCount >= lockedEvent.max_quota) {
           const error = new Error('Event registration quota is full.');
           error.status = 400;
           throw error;
@@ -79,7 +101,7 @@ const registerParticipant = async ({
       const existingParticipant = await tx.participant.findUnique({
         where: {
           eventId_email: {
-            eventId: event.id,
+            eventId: lockedEvent.id,
             email,
           },
         },
@@ -93,7 +115,7 @@ const registerParticipant = async ({
 
       return await tx.participant.create({
         data: {
-          eventId: event.id,
+          eventId: lockedEvent.id,
           name,
           email,
           custom_answers,
@@ -111,12 +133,14 @@ const registerParticipant = async ({
       });
     });
 
-    await addEmailJob('SEND_TICKET', {
+    addEmailJob('SEND_TICKET', {
       participantId: newParticipant.id,
       name: newParticipant.name,
       email: newParticipant.email,
       ticket_id: newParticipant.ticket_id,
       eventTitle: event.title,
+    }).catch((error) => {
+      console.error('[EmailQueue] Failed to enqueue ticket email:', error);
     });
 
     return {
@@ -138,6 +162,40 @@ const registerParticipant = async ({
   }
 };
 
+const checkInParticipant = async (eventId, ticket_id) => {
+  const participant = await participantRepo.findParticipantByTicketAndEvent(
+    ticket_id,
+    eventId,
+  );
+
+  if (!participant) {
+    const error = new Error(
+      'Participant or Ticket ID not found for this event.',
+    );
+    error.status = 404;
+    throw error;
+  }
+
+  if (participant.status === 'ATTENDED') {
+    const error = new Error('Participant has already checked in previously.');
+    error.status = 400;
+    throw error;
+  }
+
+  const updatedParticipant = await participantRepo.updateParticipantStatus(
+    participant.id,
+    'ATTENDED',
+  );
+
+  return updatedParticipant;
+};
+
+const getEventParticipants = async (eventId, queryParams) => {
+  return await participantRepo.findParticipantsByEvent(eventId, queryParams);
+};
+
 module.exports = {
   registerParticipant,
+  checkInParticipant,
+  getEventParticipants,
 };
