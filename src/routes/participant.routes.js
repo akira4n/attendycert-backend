@@ -32,4 +32,16 @@ router.get(
   participantController.getParticipants,
 );
 
+router.post(
+  '/:eventId/certificates/generate',
+  protectAdmin,
+  participantController.generateCertificates,
+);
+
+router.post(
+  '/:eventId/participants/:participantId/resend-certificate',
+  protectAdmin,
+  participantController.resendCertificate,
+);
+
 module.exports = router;
