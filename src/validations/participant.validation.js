@@ -94,7 +94,12 @@ const buildDynamicFormSchema = (formSchema) => {
   return z.object(shape);
 };
 
+const checkInSchema = z.object({
+  ticket_id: z.uuid({ error: 'Invalid ticket ID format.' }),
+});
+
 module.exports = {
   registerParticipantSchema,
   buildDynamicFormSchema,
+  checkInSchema,
 };
