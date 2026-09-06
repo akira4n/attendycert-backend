@@ -61,7 +61,11 @@ const getEventById = async (req, res, next) => {
 const updateEvent = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const updatedEvent = await eventService.updateEvent(id, req.body, req.file);
+    const updatedEvent = await eventService.updateEvent({
+      id,
+      updateData: req.body,
+      file: req.file,
+    });
 
     res.status(200).json({
       success: true,

@@ -89,7 +89,7 @@ const getAllEventsAdmin = async ({ page = 1, limit = 10, search, status }) => {
   };
 };
 
-const updateEvent = async (id, updateData, file) => {
+const updateEvent = async ({ id, updateData, file }) => {
   const existingEvent = await eventRepo.findEventById(id);
   if (!existingEvent) {
     const error = new Error('Event not found.');
@@ -151,7 +151,7 @@ const updateEvent = async (id, updateData, file) => {
     );
   }
 
-  const updatedEvent = await eventRepo.updateEvent(id, updateData);
+  const updatedEvent = await eventRepo.updateEvent({ id, data: updateData });
   return updatedEvent;
 };
 

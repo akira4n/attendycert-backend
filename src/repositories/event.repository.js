@@ -46,7 +46,7 @@ const createEvent = async (data) => {
   });
 };
 
-const updateEvent = async (id, data) => {
+const updateEvent = async ({ id, data }) => {
   return await prisma.event.update({
     where: { id },
     data,
