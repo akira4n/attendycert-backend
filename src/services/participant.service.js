@@ -194,8 +194,209 @@ const getEventParticipants = async (eventId, queryParams) => {
   return await participantRepo.findParticipantsByEvent(eventId, queryParams);
 };
 
+const generateCertificates = async (eventId, { prefix = 'CERT/AC/2026' }) => {
+  const event = await eventRepo.findEventById(eventId);
+  if (!event) {
+    const error = new Error('Event not found.');
+    error.status = 404;
+    throw error;
+  }
+
+  if (!event.template_url) {
+    const error = new Error(
+      'Event does not have a certificate PDF template uploaded.',
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  const { finalParticipants } = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
+
+    const eligibleParticipants = await tx.participant.findMany({
+      where: {
+        eventId,
+        status: { in: ['ATTENDED', 'FAILED'] },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    if (eligibleParticipants.length === 0) {
+      return { finalParticipants: [] };
+    }
+
+    const existingCertCount = await tx.participant.count({
+      where: {
+        eventId,
+        certificate_number: { not: null },
+      },
+    });
+
+    const currentYear = new Date().getFullYear();
+    const preparedList = [];
+    let newCertIndex = 0;
+
+    for (const p of eligibleParticipants) {
+      let certNum = p.certificate_number;
+
+      if (!certNum) {
+        const seq = String(existingCertCount + newCertIndex + 1).padStart(
+          3,
+          '0',
+        );
+        certNum = `${seq}/${prefix}/${event.slug.toUpperCase()}/${currentYear}`;
+        newCertIndex++;
+      }
+
+      const updatedParticipant = await tx.participant.update({
+        where: { id: p.id },
+        data: {
+          certificate_number: certNum,
+          status: 'PROCESSING',
+        },
+      });
+
+      preparedList.push(updatedParticipant);
+    }
+
+    return { finalParticipants: preparedList };
+  });
+
+  if (finalParticipants.length === 0) {
+    return {
+      queued_count: 0,
+      message:
+        'No eligible attended or failed participants found for certificate distribution.',
+    };
+  }
+
+  let successCount = 0;
+  let failedEnqueueCount = 0;
+
+  for (const participant of finalParticipants) {
+    try {
+      await addEmailJob('SEND_CERTIFICATE', {
+        participantId: participant.id,
+        name: participant.name,
+        email: participant.email,
+        certificate_number: participant.certificate_number,
+        template_url: event.template_url,
+        cert_name_x: event.cert_name_x,
+        cert_name_y: event.cert_name_y,
+        cert_number_x: event.cert_number_x,
+        cert_number_y: event.cert_number_y,
+        eventTitle: event.title,
+      });
+      successCount++;
+    } catch (enqueueError) {
+      console.error(
+        `[EmailQueue] Failed to enqueue certificate for ${participant.email}:`,
+        enqueueError,
+      );
+
+      await prisma.participant.update({
+        where: { id: participant.id },
+        data: { status: 'FAILED' },
+      });
+      failedEnqueueCount++;
+    }
+  }
+
+  return {
+    queued_count: successCount,
+    failed_enqueue_count: failedEnqueueCount,
+    message: `Certificate distribution queued for ${successCount} participants.${
+      failedEnqueueCount > 0
+        ? ` ${failedEnqueueCount} participants failed to queue and marked as FAILED.`
+        : ''
+    }`,
+  };
+};
+
+const resendParticipantCertificate = async (eventId, participantId) => {
+  const event = await eventRepo.findEventById(eventId);
+  if (!event || !event.template_url) {
+    const error = new Error('Event or certificate template not found.');
+    error.status = 404;
+    throw error;
+  }
+
+  const participant = await participantRepo.findParticipantById(participantId);
+  if (!participant || participant.eventId !== eventId) {
+    const error = new Error('Participant not found for this event.');
+    error.status = 404;
+    throw error;
+  }
+
+  if (participant.status === 'REGISTERED') {
+    const error = new Error(
+      'Cannot send certificate. Participant has not checked in (REGISTERED).',
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  if (!participant.certificate_number) {
+    const existingCertCount = await prisma.participant.count({
+      where: { eventId, certificate_number: { not: null } },
+    });
+    const seq = String(existingCertCount + 1).padStart(3, '0');
+    const currentYear = new Date().getFullYear();
+
+    participant.certificate_number = `${seq}/RESEND/${event.slug.toUpperCase()}/${currentYear}`;
+
+    await prisma.participant.update({
+      where: { id: participant.id },
+      data: {
+        certificate_number: participant.certificate_number,
+        status: 'PROCESSING',
+      },
+    });
+  } else {
+    await prisma.participant.update({
+      where: { id: participant.id },
+      data: { status: 'PROCESSING' },
+    });
+  }
+
+  try {
+    await addEmailJob('SEND_CERTIFICATE', {
+      participantId: participant.id,
+      name: participant.name,
+      email: participant.email,
+      certificate_number: participant.certificate_number,
+      template_url: event.template_url,
+      cert_name_x: event.cert_name_x,
+      cert_name_y: event.cert_name_y,
+      cert_number_x: event.cert_number_x,
+      cert_number_y: event.cert_number_y,
+      eventTitle: event.title,
+    });
+  } catch (enqueueError) {
+    console.error(
+      `[EmailQueue] Failed to enqueue resend job for ${participant.email}:`,
+      enqueueError,
+    );
+
+    await prisma.participant.update({
+      where: { id: participant.id },
+      data: { status: 'FAILED' },
+    });
+
+    const error = new Error(
+      'Failed to queue email job. Status updated to FAILED.',
+    );
+    error.status = 500;
+    throw error;
+  }
+
+  return { message: `Resend certificate job queued for ${participant.email}` };
+};
+
 module.exports = {
   registerParticipant,
   checkInParticipant,
   getEventParticipants,
+  generateCertificates,
+  resendParticipantCertificate,
 };
