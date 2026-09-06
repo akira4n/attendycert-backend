@@ -5,6 +5,7 @@ const { uploadToCloudinary } = require('../config/cloudinary');
 const {
   buildDynamicFormSchema,
 } = require('../validations/participant.validation');
+const { addEmailJob } = require('../queues/email.queue');
 
 const registerParticipant = async ({
   slug,
@@ -108,6 +109,14 @@ const registerParticipant = async ({
           createdAt: true,
         },
       });
+    });
+
+    await addEmailJob('SEND_TICKET', {
+      participantId: newParticipant.id,
+      name: newParticipant.name,
+      email: newParticipant.email,
+      ticket_id: newParticipant.ticket_id,
+      eventTitle: event.title,
     });
 
     return {
